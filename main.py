@@ -4,6 +4,7 @@ from linkedin_jobs_scraper.events import Events, EventData, EventMetrics
 from linkedin_jobs_scraper.query import Query, QueryOptions, QueryFilters
 from linkedin_jobs_scraper.filters import RelevanceFilters, TimeFilters, TypeFilters, ExperienceLevelFilters, \
     OnSiteOrRemoteFilters
+import csv
 
 # Change root logger level (default is WARN)
 logging.basicConfig(level=logging.INFO)
@@ -13,6 +14,9 @@ logging.basicConfig(level=logging.INFO)
 def on_data(data: EventData):
     print('[ON_DATA]', data.title, data.company, data.company_link, data.date, data.link, data.insights,
           len(data.description))
+    with open('jobs.csv', 'a', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow([data.title, data.company, data.company_link, data.date, data.link, data.insights])
 
 
 # Fired once for each page (25 jobs)
