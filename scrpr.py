@@ -47,23 +47,33 @@ def duckduckgo_search(query):
 
 
 def firstLink(query):
-    results = DDGS().text(query, max_results=1)
+    results = DDGS().text(query, max_results=2)
 
-    return results[0]["href"]
+    return [results[0]["href"], results[1]["href"]]
 
 
 if __name__ == "__main__":
     df = pd.read_csv("sp500_companies.csv")
     # Get user input for the search query
 
-    for company in df["Longname"]:
+    df["URL"] = ""
+
+    for index, row in df.iterrows():
+        company = row["Longname"]
         # Perform the search and get the first URL
-        # first_url = duckduckgo_search(company)
         first_url = firstLink(company)
+
+        # Update the DataFrame with the first URL
+        df.at[index, "URL"] = first_url
 
         # Display the result
         if first_url:
             print(f"First URL for '{company}': {first_url}")
         else:
             print(f"No results found for '{company}'.")
-        sleep(10)
+        sleep(2)
+
+    # Save the updated DataFrame to a new CSV file
+    df.to_csv("updated_companies.csv", index=False)
+
+    print(df)
