@@ -1,5 +1,8 @@
 import requests
 import json
+import pandas as pd
+from time import sleep
+from duckduckgo_search import DDGS
 
 
 def duckduckgo_search(query):
@@ -22,16 +25,14 @@ def duckduckgo_search(query):
 
     # Send GET request to the API
     response = requests.get(url, params=params)
-    # response = requests.get(
-    #     "https://api.duckduckgo.com/?q=AppleInc&format=json&pretty=1&no_html=1&skip_disambig=1"
-    # )
+
     # Check if the request was successful
     if response.status_code == 200:
         results = response.json()
-        print(json.dumps(results, indent=4))
+        # print(json.dumps(results, indent=4))
         # Extract the first URL from the results
         if results.get("Results"):
-            print(results["Results"])  # Return the first URL
+            # print(results["Results"])  # Return the first URL
             return results["Results"][0]["FirstURL"]
         elif results.get("RelatedTopics"):
             # Check the first related topic for a URL
@@ -45,15 +46,24 @@ def duckduckgo_search(query):
         return None
 
 
+def firstLink(query):
+    results = DDGS().text(query, max_results=1)
+
+    return results[0]["href"]
+
+
 if __name__ == "__main__":
+    df = pd.read_csv("sp500_companies.csv")
     # Get user input for the search query
-    query = input("Enter your search query: ")
 
-    # Perform the search and get the first URL
-    first_url = duckduckgo_search(query)
+    for company in df["Longname"]:
+        # Perform the search and get the first URL
+        # first_url = duckduckgo_search(company)
+        first_url = firstLink(company)
 
-    # Display the result
-    if first_url:
-        print(f"First URL for '{query}': {first_url}")
-    else:
-        print(f"No results found for '{query}'.")
+        # Display the result
+        if first_url:
+            print(f"First URL for '{company}': {first_url}")
+        else:
+            print(f"No results found for '{company}'.")
+        sleep(10)
