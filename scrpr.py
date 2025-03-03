@@ -9,12 +9,12 @@ def read_csv_to_list(file_path):
     with open(file_path, mode="r", newline="", encoding="utf-8") as file:
         reader = csv.reader(file)
         next(reader)  # Skip the header row
-        return [row[1] for row in reader]  # Assuming each row has one column
+        return [row for row in reader]  # Assuming each row has one column
 
 
 # Read company domains from CSV file
-company_domains = read_csv_to_list("sp500_links.csv")
-print(company_domains)
+company_domains = read_csv_to_list("career_pages.csv")
+# print(company_domains)
 # Common career page paths
 career_paths = [
     "/careers",
@@ -161,12 +161,16 @@ def generate(prompt):
         response_mime_type="text/plain",
     )
 
-    for chunk in client.models.generate_content_stream(
-        model=model,
-        contents=contents,
-        config=generate_content_config,
-    ):
-        print(chunk.text, end="")
+    # for chunk in client.models.generate_content_stream(
+    #     model=model,
+    #     contents=contents,
+    #     config=generate_content_config,
+    # ):
+    #     print(chunk.text, end="")
+    response = client.models.generate_content(
+        model="gemini-2.0-flash", contents=contents
+    )
+    return response.text
 
 
 def extract_hrefs(url):
@@ -207,25 +211,39 @@ def extract_hrefs(url):
         return []
 
 
+def append_to_csv(file_path, new_data):
+    """
+    Append a row of data to an existing CSV file.
+
+    Args:
+        file_path (str): Path to the CSV file
+        new_data (list): List of values to append as a new row
+    """
+    with open(file_path, "a", newline="") as file:
+        writer = csv.writer(file)
+        writer.writerow(new_data)
+
+
 def main():
     # Check if URL was provided as command line argument
-    if len(sys.argv) != 2:
-        print("Usage: python script.py <url>")
-        print("Example: python script.py https://example.com")
-        sys.exit(1)
-
-    url = sys.argv[1]
-    hrefs = extract_hrefs(url)
-    links = []
-    if hrefs:
-        print(f"Found {len(hrefs)} links on {url}:")
-        for i, href in enumerate(hrefs, 1):
-            links.append(href)
-            print(f"{i}. {href}")
-    else:
-        print(f"No links found on {url}")
-    response = generate(prompt + "\n".join(links))
-    print(response)
+    for company_domain in company_domains:
+        print(f"Processing {company_domain[0]}...")
+        if company_domain[1] != "Not Found":
+            hrefs = extract_hrefs(company_domain[1])
+            links = []
+            if hrefs:
+                print(f"Found {len(hrefs)} links on {company_domain}:")
+                for i, href in enumerate(hrefs, 1):
+                    links.append(href)
+                    # print(f"{i}. {href}")
+            else:
+                print(f"No links found on {company_domain}")
+            response = generate(prompt + "\n".join(links))
+            print(response)
+            append_to_csv("job_links.csv", [company_domain, response])
+            sleep(5)
+        else:
+            append_to_csv("job_links.csv", [company_domain[0], "Not Found"])
 
 
 if __name__ == "__main__":
