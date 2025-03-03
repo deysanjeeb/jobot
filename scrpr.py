@@ -67,19 +67,85 @@ def find_careers_page(domain):
 
 
 # Find career pages
-career_pages = []
-for domain in company_domains:
-    careers_url = find_careers_page(domain)
-    career_pages.append({"Company Domain": domain, "Careers Page URL": careers_url})
-    sleep(2)
+# career_pages = []
+# for domain in company_domains:
+#     careers_url = find_careers_page(domain)
+#     career_pages.append({"Company Domain": domain, "Careers Page URL": careers_url})
+#     sleep(2)
 
-# Save results to CSV
-csv_filename = "career_pages.csv"
-with open(csv_filename, mode="w", newline="", encoding="utf-8") as csvfile:
-    fieldnames = ["Company Domain", "Careers Page URL"]
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+# # Save results to CSV
+# csv_filename = "career_pages.csv"
+# with open(csv_filename, mode="w", newline="", encoding="utf-8") as csvfile:
+#     fieldnames = ["Company Domain", "Careers Page URL"]
+#     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    writer.writeheader()
-    writer.writerows(career_pages)
+#     writer.writeheader()
+#     writer.writerows(career_pages)
 
-print(f"\n✅ Results saved to {csv_filename}")
+# print(f"\n✅ Results saved to {csv_filename}")
+
+
+import requests
+from bs4 import BeautifulSoup
+import sys
+
+
+def extract_hrefs(url):
+    """
+    Fetch HTML from a URL and extract all href attributes from links.
+
+    Args:
+        url (str): The URL to fetch and parse
+
+    Returns:
+        list: A list of all href values found in the page
+    """
+    try:
+        # Send HTTP request to the URL
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = requests.get(url, headers=headers, timeout=10)
+
+        # Check if the request was successful
+        response.raise_for_status()
+
+        # Parse HTML content
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Find all elements with href attributes
+        links = []
+        for link in soup.find_all(href=True):
+            links.append(link["href"])
+
+        return links
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching URL: {e}")
+        return []
+    except Exception as e:
+        print(f"Error processing HTML: {e}")
+        return []
+
+
+def main():
+    # Check if URL was provided as command line argument
+    if len(sys.argv) != 2:
+        print("Usage: python script.py <url>")
+        print("Example: python script.py https://example.com")
+        sys.exit(1)
+
+    url = sys.argv[1]
+    hrefs = extract_hrefs(url)
+    links = []
+    if hrefs:
+        print(f"Found {len(hrefs)} links on {url}:")
+        for i, href in enumerate(hrefs, 1):
+            links.append(href)
+            print(f"{i}. {href}")
+    else:
+        print(f"No links found on {url}")
+
+
+if __name__ == "__main__":
+    main()
