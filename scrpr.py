@@ -88,6 +88,85 @@ def find_careers_page(domain):
 import requests
 from bs4 import BeautifulSoup
 import sys
+import base64
+import os
+from dotenv import load_dotenv
+from google.genai import types
+from google import genai
+
+
+load_dotenv()
+
+prompt = """You are a specialized URL evaluator with expertise in identifying job listing websites. You'll be given a list of URLs, and your task is to analyze them and identify the top 5 most likely to contain job listings.
+
+When analyzing each URL, consider these characteristics:
+
+1. HIGHEST PRIORITY - Direct job application or job search paths:
+   - URLs containing "/jobs", "/careers", "/employment", "job-search", or similar job-specific paths
+   - Job application portals (like "jobs.company.com")
+   - URLs with paths containing "search" combined with job-related contexts
+
+2. HIGH PRIORITY - Career information pages:
+   - URLs containing "work-at-[company]", "life-at-[company]"
+   - Career index pages ("/careers/index.html")
+   - Department-specific career pages ("/careers/retail", "/careers/software")
+   - Paths containing "recruitment", "hiring", or "positions"
+
+3. MEDIUM PRIORITY - URL fragments suggesting job-related content:
+   - Relative paths leading to career sections
+   - URLs containing "profile", "apply", or "application" in a context suggesting employment
+   - Specialized department hiring pages (engineering, technical, support)
+
+Ignore:
+   - Shopping cart pages ("/bag", "/shop", "/store")
+   - Support or customer service pages (unless specifically for job applications)
+   - Media files (CSS, video) unless they're directly job-related content
+   - General product, service, or company information pages
+
+For each URL, assign a confidence score (0-100) based on how likely it contains job listings, with brief reasoning.
+
+Return only the top 5 URLs with highest scores, ranked from highest to lowest probability, formatted as:
+1. [URL] - [Score]/100: [Brief explanation]
+2. [URL] - [Score]/100: [Brief explanation]
+...
+
+If multiple URLs have equal scores, prioritize:
+- Complete URLs over relative paths
+- Job search/application pages over informational career pages
+- Department-specific career pages over general career pages
+- URLs with cleaner, simpler structures
+
+Include no other text in your response beyond this ranked list."""
+
+
+def generate(prompt):
+    client = genai.Client(
+        api_key=os.environ.get("GEMINI_API_KEY"),
+    )
+
+    model = "gemini-2.0-flash"
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text=prompt),
+            ],
+        ),
+    ]
+    generate_content_config = types.GenerateContentConfig(
+        temperature=1,
+        top_p=0.95,
+        top_k=40,
+        max_output_tokens=8192,
+        response_mime_type="text/plain",
+    )
+
+    for chunk in client.models.generate_content_stream(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    ):
+        print(chunk.text, end="")
 
 
 def extract_hrefs(url):
@@ -145,6 +224,8 @@ def main():
             print(f"{i}. {href}")
     else:
         print(f"No links found on {url}")
+    response = generate(prompt + "\n".join(links))
+    print(response)
 
 
 if __name__ == "__main__":
