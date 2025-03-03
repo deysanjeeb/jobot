@@ -1,79 +1,85 @@
 import requests
-import json
-import pandas as pd
+from bs4 import BeautifulSoup
+import csv
 from time import sleep
-from duckduckgo_search import DDGS
 
 
-def duckduckgo_search(query):
-    """
-    Perform a search using the DuckDuckGo Instant Answer API and return the first URL.
-
-    :param query: The search query string.
-    :return: The first URL from the search results, or None if no results are found.
-    """
-    # DuckDuckGo API endpoint
-    url = "https://api.duckduckgo.com/"
-
-    # Parameters for the API request
-    params = {
-        "q": query,  # Search query
-        "format": "json",  # Response format
-        "no_html": 1,  # Exclude HTML from results
-        "skip_disambig": 1,  # Skip disambiguation pages
-    }
-
-    # Send GET request to the API
-    response = requests.get(url, params=params)
-
-    # Check if the request was successful
-    if response.status_code == 200:
-        results = response.json()
-        # print(json.dumps(results, indent=4))
-        # Extract the first URL from the results
-        if results.get("Results"):
-            # print(results["Results"])  # Return the first URL
-            return results["Results"][0]["FirstURL"]
-        elif results.get("RelatedTopics"):
-            # Check the first related topic for a URL
-            for topic in results["RelatedTopics"]:
-                if topic.get("FirstURL"):
-                    return topic["FirstURL"]
-        else:
-            return None  # No URL found
-    else:
-        print(f"Error: Unable to fetch results (Status Code: {response.status_code})")
-        return None
+# List of company domains
+def read_csv_to_list(file_path):
+    with open(file_path, mode="r", newline="", encoding="utf-8") as file:
+        reader = csv.reader(file)
+        next(reader)  # Skip the header row
+        return [row[1] for row in reader]  # Assuming each row has one column
 
 
-def firstLink(query):
-    results = DDGS().text(query, max_results=2)
+# Read company domains from CSV file
+company_domains = read_csv_to_list("sp500_links.csv")
+print(company_domains)
+# Common career page paths
+career_paths = [
+    "/careers",
+    "/careers/",
+    "/jobs",
+    "/jobs/",
+    "/about/careers",
+    "/company/careers",
+    "/en/careers",
+    "/employment",
+    "/work-with-us",
+]
 
-    return [results[0]["href"], results[1]["href"]]
+headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
 
 
-if __name__ == "__main__":
-    df = pd.read_csv("sp500_companies.csv")
-    # Get user input for the search query
+def find_careers_page(domain):
+    for path in career_paths:
+        url = domain.rstrip("/") + path
+        try:
+            response = requests.get(url, headers=headers, timeout=10)
+            if response.status_code == 200:
+                print(f"[FOUND] Careers page for {domain}: {url}")
+                return url
+        except requests.RequestException as e:
+            print(f"[ERROR] {url}: {e}")
 
-    df["URL"] = ""
+    # Fallback: Try to scrape the homepage for career-related links
+    try:
+        response = requests.get(domain, headers=headers, timeout=10)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, "html.parser")
+            for link in soup.find_all("a", href=True):
+                href = link["href"].lower()
+                if "career" in href or "job" in href or "work" in href:
+                    if href.startswith("http"):
+                        print(f"[SCRAPED] Possible careers page for {domain}: {href}")
+                        return href
+                    else:
+                        full_url = domain.rstrip("/") + "/" + href.lstrip("/")
+                        print(
+                            f"[SCRAPED] Possible careers page for {domain}: {full_url}"
+                        )
+                        return full_url
+    except requests.RequestException as e:
+        print(f"[ERROR] Failed to scrape {domain}: {e}")
 
-    for index, row in df.iterrows():
-        company = row["Longname"]
-        # Perform the search and get the first URL
-        first_url = firstLink(company)
+    print(f"[NOT FOUND] No careers page found for {domain}")
+    return "Not Found"
 
-        # Update the DataFrame with the first URL
-        df.at[index, "URL"] = first_url
 
-        # Display the result
-        if first_url:
-            print(f"First URL for '{company}': {first_url}")
-        else:
-            print(f"No results found for '{company}'.")
-        sleep(2)
+# Find career pages
+career_pages = []
+for domain in company_domains:
+    careers_url = find_careers_page(domain)
+    career_pages.append({"Company Domain": domain, "Careers Page URL": careers_url})
+    sleep(2)
 
-    # Save the updated DataFrame to a new CSV file
-    df.to_csv("updated_companies.csv", index=False)
+# Save results to CSV
+csv_filename = "career_pages.csv"
+with open(csv_filename, mode="w", newline="", encoding="utf-8") as csvfile:
+    fieldnames = ["Company Domain", "Careers Page URL"]
+    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    print(df)
+    writer.writeheader()
+    writer.writerows(career_pages)
+
+print(f"\n✅ Results saved to {csv_filename}")
