@@ -13,7 +13,7 @@ def read_csv_to_list(file_path):
 
 
 # Read company domains from CSV file
-company_domains = read_csv_to_list("career_pages.csv")
+company_domains = read_csv_to_list("career_pages2.csv")
 # print(company_domains)
 # Common career page paths
 career_paths = [
@@ -97,7 +97,7 @@ from google import genai
 
 load_dotenv()
 
-prompt = """You are a specialized URL evaluator with expertise in identifying job listing websites. You'll be given a list of URLs, and your task is to analyze them and identify the top 5 most likely to contain job listings.
+linkRanker = """You are a specialized URL evaluator with expertise in identifying job listing websites. You'll be given a list of URLs, and your task is to analyze them and identify the top 5 most likely to contain job listings.
 
 When analyzing each URL, consider these characteristics:
 
@@ -238,10 +238,10 @@ def main():
                     # print(f"{i}. {href}")
             else:
                 print(f"No links found on {company_domain}")
-            response = generate(prompt + "\n".join(links))
+            response = generate(linkRanker + "\n".join(links))
             print(response)
             append_to_csv("job_links.csv", [company_domain, response])
-            sleep(5)
+            sleep(10)
         else:
             append_to_csv("job_links.csv", [company_domain[0], "Not Found"])
 
