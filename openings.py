@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import re
+from urllib.parse import urljoin, urlparse
 
 
 def get_highest_scored_link(links_with_scores):
@@ -24,7 +25,7 @@ def get_highest_scored_link(links_with_scores):
     return highest_scored_link
 
 
-def visit_link(url):
+def extract_links(url):
     try:
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
@@ -42,16 +43,48 @@ def visit_link(url):
             title = soup.title.string if soup.title else "No title found"
             print(f"Page title: {title}")
 
-            # Print first 100 characters of content
-            content_text = soup.get_text().strip()
-            print(f"Content preview: {content_text[:100]}...")
+            # Extract all links
+            links = []
+            base_url = "{0.scheme}://{0.netloc}".format(urlparse(url))
+
+            for a_tag in soup.find_all("a", href=True):
+                href = a_tag["href"]
+
+                # Skip javascript and anchor links
+                if href.startswith("javascript:") or href.startswith("#"):
+                    continue
+
+                # Convert relative URLs to absolute URLs
+                if not href.startswith(("http://", "https://")):
+                    href = urljoin(base_url, href)
+
+                link_text = a_tag.text.strip()
+                if not link_text:
+                    link_text = "No text"
+
+                links.append(
+                    {
+                        "url": href,
+                        "text": link_text[:50] + ("..." if len(link_text) > 50 else ""),
+                    }
+                )
+
+            print(f"\nFound {len(links)} links on the page:\n")
+
+            # Print all links with their text
+            for i, link in enumerate(links, 1):
+                print(f"{i}. {link['url']} - \"{link['text']}\"")
+
+            return links
 
         else:
             print(f"Failed to access {url}")
             print(f"Status code: {response.status_code}")
+            return []
 
     except Exception as e:
         print(f"An error occurred: {e}")
+        return []
 
 
 if __name__ == "__main__":
@@ -65,8 +98,16 @@ if __name__ == "__main__":
     highest_link = get_highest_scored_link(links_with_scores)
     print(f"Highest scored link: {highest_link}")
 
-    # Visit the highest scored link
+    # Visit the highest scored link and extract all links
     if highest_link:
-        visit_link(highest_link)
+        all_links = extract_links(highest_link)
+
+        # Save links to a file
+        with open("extracted_links.txt", "w", encoding="utf-8") as f:
+            f.write(f"Links extracted from {highest_link}:\n\n")
+            for i, link in enumerate(all_links, 1):
+                f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
+
+        print(f"\nAll links have been saved to 'extracted_links.txt'")
     else:
         print("No valid link found.")
