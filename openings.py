@@ -3,6 +3,53 @@ from bs4 import BeautifulSoup
 import re
 from urllib.parse import urljoin, urlparse
 
+from dotenv import load_dotenv
+from google.genai import types
+from google import genai
+
+
+load_dotenv()
+
+
+def filter_jobs_apple_links(links_list):
+    """
+    Filter a list of links to keep only those from the jobs.apple.com subdomain.
+
+    Args:
+        links_list (list or str): Either a list of URLs or a string with numbered URLs (one per line)
+
+    Returns:
+        list: A list of dictionaries containing filtered links with their index, URL, and text
+    """
+    # Process input if it's a string
+    if isinstance(links_list, str):
+        # Regular expression to extract links from numbered list
+        pattern = r'(\d+)\. (https?://[^\s]+) - "(.*?)"'
+        links = []
+
+        for line in links_list.strip().split("\n"):
+            match = re.match(pattern, line)
+            if match:
+                index = int(match.group(1))
+                url = match.group(2)
+                text = match.group(3)
+                links.append({"index": index, "url": url, "text": text})
+    else:
+        # Assume links_list is already a list of URLs
+        links = [
+            {"index": i + 1, "url": url, "text": ""} for i, url in enumerate(links_list)
+        ]
+
+    # Filter links to include only jobs.apple.com
+    jobs_links = []
+
+    for link in links:
+        parsed_url = urlparse(link["url"])
+        if parsed_url.netloc == "jobs.apple.com":
+            jobs_links.append(link)
+
+    return jobs_links
+
 
 def get_highest_scored_link(links_with_scores):
     # Parse the string to extract links and scores
@@ -111,3 +158,20 @@ if __name__ == "__main__":
         print(f"\nAll links have been saved to 'extracted_links.txt'")
     else:
         print("No valid link found.")
+
+    with open("extracted_links.txt", "r", encoding="utf-8") as f:
+        links_text = f.read()
+
+    # Filter the links
+    filtered_links = filter_jobs_apple_links(links_text)
+
+    # Print the filtered links
+    print(filtered_links)
+
+    # Optionally, save to a new file
+    with open("filtered_jobs_links.txt", "w", encoding="utf-8") as f:
+        f.write("Links from jobs.apple.com:\n\n")
+        for link in filtered_links:
+            f.write(f"{link['index']}. {link['url']} - \"{link['text']}\"\n")
+
+    print(f"\nFiltered links saved to 'filtered_jobs_links.txt'")
