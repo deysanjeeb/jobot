@@ -2,7 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 import re
 from urllib.parse import urljoin, urlparse
-
+import csv
+import prompts
 from dotenv import load_dotenv
 from google.genai import types
 from google import genai
@@ -169,9 +170,10 @@ if __name__ == "__main__":
     print(filtered_links)
 
     # Optionally, save to a new file
-    with open("filtered_jobs_links.txt", "w", encoding="utf-8") as f:
-        f.write("Links from jobs.apple.com:\n\n")
+    with open("filtered_jobs_links.csv", "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["URL", "Text"])
         for link in filtered_links:
-            f.write(f"{link['index']}. {link['url']} - \"{link['text']}\"\n")
+            writer.writerow([link["url"], link["text"]])
 
-    print(f"\nFiltered links saved to 'filtered_jobs_links.txt'")
+    print(f"\nFiltered links saved to 'filtered_jobs_links.csv'")
