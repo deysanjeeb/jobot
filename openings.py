@@ -7,7 +7,8 @@ import prompts
 from dotenv import load_dotenv
 from google.genai import types
 from google import genai
-
+import os
+import xml.etree.ElementTree as ET
 
 load_dotenv()
 
@@ -135,6 +136,40 @@ def extract_links(url):
         return []
 
 
+def generate(prompt):
+    client = genai.Client(
+        api_key=os.environ.get("GEMINI_API_KEY"),
+    )
+
+    model = "gemini-2.0-flash"
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(text=prompt),
+            ],
+        ),
+    ]
+    generate_content_config = types.GenerateContentConfig(
+        temperature=1,
+        top_p=0.95,
+        top_k=40,
+        max_output_tokens=8192,
+        response_mime_type="text/plain",
+    )
+
+    # for chunk in client.models.generate_content_stream(
+    #     model=model,
+    #     contents=contents,
+    #     config=generate_content_config,
+    # ):
+    #     print(chunk.text, end="")
+    response = client.models.generate_content(
+        model="gemini-2.0-flash", contents=contents
+    )
+    return response.text
+
+
 if __name__ == "__main__":
     # Sample data from input
     links_with_scores = """1. https://jobs.apple.com/en-us/search - 100/100: Direct job search portal on Apple's jobs domain, highest priority.
@@ -167,7 +202,21 @@ if __name__ == "__main__":
     filtered_links = filter_jobs_apple_links(links_text)
 
     # Print the filtered links
-    print(filtered_links)
+    # print(filtered_links)
+    formatted_prompt = prompts.openPositions.format(URL_TEXT_PAIRS=filtered_links)
+    response = generate(formatted_prompt)
+    print(response)
+    filteredLines = [
+        line for line in response.split("\n") if not line.strip().startswith("```")
+    ]
+    cleanResponse = "\n".join(filteredLines)
+    print(cleanResponse)
+    root = ET.ElementTree(ET.fromstring(cleanResponse)).getroot()
+
+    # Extract job links (handling text within the root element)
+    job_links = [line.strip() for line in root.text.strip().split("\n")]
+    print(len(job_links))
+    print(job_links)
 
     # Optionally, save to a new file
     with open("filtered_jobs_links.csv", "w", newline="", encoding="utf-8") as f:
