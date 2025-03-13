@@ -14,6 +14,23 @@ import xml.etree.ElementTree as ET
 load_dotenv()
 
 
+def extract_domain(url):
+    """
+    Extract the domain from a URL.
+
+    Args:
+        url (str): The URL string
+
+    Returns:
+        str: The extracted domain
+    """
+    pattern = r"https?://([^/]+)"
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1)
+    return None
+
+
 def filter_jobs_apple_links(links_list, highest_link):
     """
     Filter a list of links to keep only those from the jobs.apple.com subdomain.
@@ -26,9 +43,10 @@ def filter_jobs_apple_links(links_list, highest_link):
     """
     jobs_links = []
     print(highest_link)
+
     for i, link in enumerate(links_list):
         parsed_url = urlparse(link["url"])
-        if parsed_url.netloc == "jobs.apple.com":
+        if parsed_url.netloc == extract_domain(highest_link):
             jobs_links.append(
                 {"index": i + 1, "url": link["url"], "text": link["text"]}
             )
@@ -42,7 +60,7 @@ def get_highest_scored_link(links_with_scores):
     highest_scored_link = ""
 
     # Regular expression to match links with scores
-    pattern = r"(\d+)\. (https?://[^\s]+|/[^\s]+) - (\d+)/100:"
+    pattern = r"(\d+)\. +(https?://[^\s]+|/[^\s]+) - (\d+)/100:"
 
     for line in links_with_scores.strip().split("\n"):
         match = re.search(pattern, line)
@@ -168,15 +186,17 @@ if __name__ == "__main__":
 5. /careers/us/retail.html - 70/100: Relative path pointing to retail careers page, suggests a specific department's hiring information."""
     for company in companies:
         print(f"Analyzing links for {company['url']}...")
+        print(f"Links: {company['text']}")
         highest_link = get_highest_scored_link(company["text"])
-        # print(f"Highest scored link: {highest_link}")
+
+        print(f"Highest scored link: {highest_link}")
         all_links = extract_links(highest_link)
         # Save links to a file
         with open("extracted_links.txt", "w", encoding="utf-8") as f:
             f.write(f"Links extracted from {company['url']}:\n\n")
             for i, link in enumerate(all_links, 1):
                 f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
-
+        print(all_links)
         print(f"\nAll links have been saved to 'extracted_links.txt'")
         # Filter the links
         filtered_links = filter_jobs_apple_links(all_links, highest_link)
