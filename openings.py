@@ -171,6 +171,13 @@ def generate(prompt):
 
 
 if __name__ == "__main__":
+    csv_path = "job_links.csv"
+    companies = []
+    with open(csv_path, "r", encoding="utf-8") as file:
+        reader = csv.DictReader(file)
+        for row in reader:
+            companies.append({"url": row["Domain"], "text": row["Links"]})
+    print(companies)
     # Sample data from input
     links_with_scores = """1. https://jobs.apple.com/en-us/search - 100/100: Direct job search portal on Apple's jobs domain, highest priority.
 2. https://jobs.apple.com/app/en-us/profile/info - 95/100: Direct link to profile information page in Apple's job application portal, suggesting account management for job applications.
