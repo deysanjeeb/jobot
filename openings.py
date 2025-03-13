@@ -18,37 +18,19 @@ def filter_jobs_apple_links(links_list):
     Filter a list of links to keep only those from the jobs.apple.com subdomain.
 
     Args:
-        links_list (list or str): Either a list of URLs or a string with numbered URLs (one per line)
+        links_list (list): A list of dictionaries containing URLs and their text
 
     Returns:
         list: A list of dictionaries containing filtered links with their index, URL, and text
     """
-    # Process input if it's a string
-    if isinstance(links_list, str):
-        # Regular expression to extract links from numbered list
-        pattern = r'(\d+)\. (https?://[^\s]+) - "(.*?)"'
-        links = []
-
-        for line in links_list.strip().split("\n"):
-            match = re.match(pattern, line)
-            if match:
-                index = int(match.group(1))
-                url = match.group(2)
-                text = match.group(3)
-                links.append({"index": index, "url": url, "text": text})
-    else:
-        # Assume links_list is already a list of URLs
-        links = [
-            {"index": i + 1, "url": url, "text": ""} for i, url in enumerate(links_list)
-        ]
-
-    # Filter links to include only jobs.apple.com
     jobs_links = []
 
-    for link in links:
+    for i, link in enumerate(links_list):
         parsed_url = urlparse(link["url"])
         if parsed_url.netloc == "jobs.apple.com":
-            jobs_links.append(link)
+            jobs_links.append(
+                {"index": i + 1, "url": link["url"], "text": link["text"]}
+            )
 
     return jobs_links
 
@@ -184,52 +166,92 @@ if __name__ == "__main__":
 3. https://www.apple.com/careers/us/ - 90/100:  Direct path to US careers page, very likely to contain job listings.
 4. /careers/us/index.html - 80/100: Relative path pointing to US careers index page, suggests job listings.
 5. /careers/us/retail.html - 70/100: Relative path pointing to retail careers page, suggests a specific department's hiring information."""
-
-    highest_link = get_highest_scored_link(links_with_scores)
-    print(f"Highest scored link: {highest_link}")
-
-    # Visit the highest scored link and extract all links
-    if highest_link:
+    for company in companies:
+        print(f"Analyzing links for {company['url']}...")
+        highest_link = get_highest_scored_link(company["text"])
+        # print(f"Highest scored link: {highest_link}")
         all_links = extract_links(highest_link)
-
         # Save links to a file
         with open("extracted_links.txt", "w", encoding="utf-8") as f:
-            f.write(f"Links extracted from {highest_link}:\n\n")
+            f.write(f"Links extracted from {company['url']}:\n\n")
             for i, link in enumerate(all_links, 1):
                 f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
 
         print(f"\nAll links have been saved to 'extracted_links.txt'")
-    else:
-        print("No valid link found.")
+        print(all_links)
+        # Filter the links
+        filtered_links = filter_jobs_apple_links(all_links)
 
-    with open("extracted_links.txt", "r", encoding="utf-8") as f:
-        links_text = f.read()
+        # Print the filtered links
+        # print(filtered_links)
+        formatted_prompt = prompts.openPositions.format(URL_TEXT_PAIRS=filtered_links)
+        response = generate(formatted_prompt)
+        print(response)
+        filteredLines = [
+            line for line in response.split("\n") if not line.strip().startswith("```")
+        ]
+        cleanResponse = "\n".join(filteredLines)
+        print(cleanResponse)
+        root = ET.ElementTree(ET.fromstring(cleanResponse)).getroot()
 
-    # Filter the links
-    filtered_links = filter_jobs_apple_links(links_text)
+        # Extract job links (handling text within the root element)
+        job_links = [line.strip() for line in root.text.strip().split("\n")]
+        print(len(job_links))
+        print(job_links)
 
-    # Print the filtered links
-    # print(filtered_links)
-    formatted_prompt = prompts.openPositions.format(URL_TEXT_PAIRS=filtered_links)
-    response = generate(formatted_prompt)
-    print(response)
-    filteredLines = [
-        line for line in response.split("\n") if not line.strip().startswith("```")
-    ]
-    cleanResponse = "\n".join(filteredLines)
-    print(cleanResponse)
-    root = ET.ElementTree(ET.fromstring(cleanResponse)).getroot()
+        # Optionally, save to a new file
+        with open("filtered_jobs_links.csv", "w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["URL", "Text"])
+            for link in filtered_links:
+                writer.writerow([link["url"], link["text"]])
 
-    # Extract job links (handling text within the root element)
-    job_links = [line.strip() for line in root.text.strip().split("\n")]
-    print(len(job_links))
-    print(job_links)
+        print(f"\nFiltered links saved to 'filtered_jobs_links.csv'")
+    # highest_link = get_highest_scored_link(links_with_scores)
+    # print(f"Highest scored link: {highest_link}")
 
-    # Optionally, save to a new file
-    with open("filtered_jobs_links.csv", "w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["URL", "Text"])
-        for link in filtered_links:
-            writer.writerow([link["url"], link["text"]])
+    # # Visit the highest scored link and extract all links
+    # if highest_link:
+    #     all_links = extract_links(highest_link)
 
-    print(f"\nFiltered links saved to 'filtered_jobs_links.csv'")
+    #     # Save links to a file
+    #     with open("extracted_links.txt", "w", encoding="utf-8") as f:
+    #         f.write(f"Links extracted from {highest_link}:\n\n")
+    #         for i, link in enumerate(all_links, 1):
+    #             f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
+
+    #     print(f"\nAll links have been saved to 'extracted_links.txt'")
+    # else:
+    #     print("No valid link found.")
+
+    # with open("extracted_links.txt", "r", encoding="utf-8") as f:
+    #     links_text = f.read()
+
+    # # Filter the links
+    # filtered_links = filter_jobs_apple_links(links_text)
+
+    # # Print the filtered links
+    # # print(filtered_links)
+    # formatted_prompt = prompts.openPositions.format(URL_TEXT_PAIRS=filtered_links)
+    # response = generate(formatted_prompt)
+    # print(response)
+    # filteredLines = [
+    #     line for line in response.split("\n") if not line.strip().startswith("```")
+    # ]
+    # cleanResponse = "\n".join(filteredLines)
+    # print(cleanResponse)
+    # root = ET.ElementTree(ET.fromstring(cleanResponse)).getroot()
+
+    # # Extract job links (handling text within the root element)
+    # job_links = [line.strip() for line in root.text.strip().split("\n")]
+    # print(len(job_links))
+    # print(job_links)
+
+    # # Optionally, save to a new file
+    # with open("filtered_jobs_links.csv", "w", newline="", encoding="utf-8") as f:
+    #     writer = csv.writer(f)
+    #     writer.writerow(["URL", "Text"])
+    #     for link in filtered_links:
+    #         writer.writerow([link["url"], link["text"]])
+
+    # print(f"\nFiltered links saved to 'filtered_jobs_links.csv'")
