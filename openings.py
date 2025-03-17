@@ -346,10 +346,9 @@ if __name__ == "__main__":
 
             # Optionally, save to a new file
             with open(
-                "filtered_jobs_links.csv", "w", newline="", encoding="utf-8"
+                "filtered_jobs_links.csv", "a", newline="", encoding="utf-8"
             ) as f:
                 writer = csv.writer(f)
-                writer.writerow(["URL", "Text"])
                 for link in filtered_links:
                     writer.writerow([link["url"], link["text"]])
 
