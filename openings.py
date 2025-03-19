@@ -319,7 +319,7 @@ if __name__ == "__main__":
             continue
         print(all_links)
         # Save links to a file
-        with open("extracted_links.txt", "w", encoding="utf-8") as f:
+        with open("extracted_links.txt", "a", encoding="utf-8") as f:
             f.write(f"Links extracted from {company['url']}:\n\n")
             for i, link in enumerate(all_links, 1):
                 f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
@@ -330,8 +330,9 @@ if __name__ == "__main__":
 
         # Print the filtered links
         # print(filtered_links)
-        formatted_prompt = prompts.openPositions.format(URL_TEXT_PAIRS=filtered_links)
+        formatted_prompt = prompts.openPositions2.format(URL_TEXT_PAIRS=filtered_links)
         response = generate(formatted_prompt)
+        print(response)
         filteredLines = [
             line for line in response.split("\n") if not line.strip().startswith("```")
         ]
@@ -342,15 +343,13 @@ if __name__ == "__main__":
             # Extract job links (handling text within the root element)
             job_links = [line.strip() for line in root.text.strip().split("\n")]
             print(len(job_links))
-            pprint(job_links)
-
-            # Optionally, save to a new file
+            print(type(job_links))
             with open(
                 "filtered_jobs_links.csv", "a", newline="", encoding="utf-8"
             ) as f:
                 writer = csv.writer(f)
-                for link in filtered_links:
-                    writer.writerow([link["url"], link["text"]])
+                for link in job_links:
+                    writer.writerow([link])
 
             print(f"\nFiltered links saved to 'filtered_jobs_links.csv'")
         except Exception as e:
