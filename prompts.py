@@ -23,6 +23,40 @@ No job position links found.
 
 Provide only the list of job position links without any additional commentary or explanation."""
 
+openPositions2 = """You are an AI assistant tasked with identifying job position links from a set of URL and text pairs. Your goal is to create a list of links that specifically point to individual job postings, excluding any other types of pages such as general career pages, sign-in pages, or non-job-related content.
+
+Here is the set of URL and text pairs you need to analyze:
+
+<url_text_pairs>
+{URL_TEXT_PAIRS}
+</url_text_pairs>
+
+Please follow these steps to complete the task:
+
+1. Analyze each URL and text pair in the given set.
+
+2. For each pair, use the following criteria to determine if it's a job position link:
+   - The URL should contain keywords like "jobs", "careers", "positions", or "openings"
+   - The URL should include a specific job identifier or title
+   - The accompanying text should describe a job title or role
+   - Exclude links to general career pages, sign-in pages, or non-job-related content
+
+3. If you determine a link is for a job position, add it to your list of job position links.
+
+4. After analyzing all pairs, present your final list of job position links in the following format:
+
+<job_position_links>
+[List your identified job position links here, one per line]
+</job_position_links>
+
+If you find no job position links, output:
+
+<job_position_links>
+No job position links found.
+</job_position_links>
+
+Remember to provide only the list of job position links without any additional commentary or explanation."""
+
 linkRanker = """You are a specialized URL evaluator with expertise in identifying job listing websites. You'll be given a list of URLs, and your task is to analyze them and identify the top 5 most likely to contain job listings.
 
 When analyzing each URL, consider these characteristics:
