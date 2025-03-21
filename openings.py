@@ -12,6 +12,7 @@ from google import genai
 import os
 from pprint import pprint
 import xml.etree.ElementTree as ET
+import sqlite3  # Added SQLite import
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
@@ -184,22 +185,11 @@ def extract_links(url):
         }
         response = requests.get(url, headers=headers)
 
-        # driver.get(url)
-        # html_content = driver.page_source
-        # print(html_content)
-        # response_status_code = (
-        #     driver.execute_script("return document.readyState") == "complete"
-        #     and 200
-        #     or 500
-        # )
-        # response = type("Response", (object,), {"status_code": response_status_code})()
-
         if response.status_code == 200:
             print(f"Successfully accessed {url}")
             print(f"Status code: {response.status_code}")
 
             # Parse the HTML content
-
             soup = BeautifulSoup(response.text, "html.parser")
 
             # Extract and print the title
@@ -234,11 +224,6 @@ def extract_links(url):
                 )
 
             print(f"\nFound {len(links)} links on the page:\n")
-
-            # Print all links with their text
-            # for i, link in enumerate(links, 1):
-            #     print(f"{i}. {link['url']} - \"{link['text']}\"")
-
             return links
 
         else:
@@ -273,31 +258,76 @@ def generate(prompt):
         response_mime_type="text/plain",
     )
 
-    # for chunk in client.models.generate_content_stream(
-    #     model=model,
-    #     contents=contents,
-    #     config=generate_content_config,
-    # ):
-    #     print(chunk.text, end="")
     response = client.models.generate_content(
         model="gemini-2.0-flash", contents=contents
     )
     return response.text
 
 
+def setup_database():
+    """
+    Set up SQLite database with a table for job links
+    """
+    conn = sqlite3.connect("job_links.db")
+    cursor = conn.cursor()
+
+    # Create table if it doesn't exist
+    cursor.execute(
+        """
+    CREATE TABLE IF NOT EXISTS job_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company TEXT NOT NULL,
+        link TEXT NOT NULL,
+        date_added TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+    """
+    )
+
+    conn.commit()
+    conn.close()
+    print("Database setup complete")
+
+
+def save_job_links_to_db(job_links, company_url):
+    """
+    Save job links to SQLite database
+
+    Args:
+        job_links (list): List of job links
+        company_url (str): The company URL/domain
+    """
+    if not job_links:
+        print(f"No job links to save for {company_url}")
+        return
+
+    conn = sqlite3.connect("job_links.db")
+    cursor = conn.cursor()
+
+    # Extract company name from URL for better identification
+    company_name = extract_domain(company_url)
+
+    # Insert links
+    for link in job_links:
+        cursor.execute(
+            "INSERT INTO job_links (company, link) VALUES (?, ?)", (company_name, link)
+        )
+
+    conn.commit()
+    print(f"Saved {len(job_links)} job links for {company_name} to database")
+    conn.close()
+
+
 if __name__ == "__main__":
+    # Set up the database first
+    setup_database()
+
     csv_path = "job_links.csv"
     companies = []
     with open(csv_path, "r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
             companies.append({"url": row["Domain"], "text": row["Links"]})
-    # Sample data from input
-    links_with_scores = """1. https://jobs.apple.com/en-us/search - 100/100: Direct job search portal on Apple's jobs domain, highest priority.
-2. https://jobs.apple.com/app/en-us/profile/info - 95/100: Direct link to profile information page in Apple's job application portal, suggesting account management for job applications.
-3. https://www.apple.com/careers/us/ - 90/100:  Direct path to US careers page, very likely to contain job listings.
-4. /careers/us/index.html - 80/100: Relative path pointing to US careers index page, suggests job listings.
-5. /careers/us/retail.html - 70/100: Relative path pointing to retail careers page, suggests a specific department's hiring information."""
+
     for company in companies:
         highest_link = ""
         print(f"Analyzing links for {company['url']}...")
@@ -318,18 +348,18 @@ if __name__ == "__main__":
             print("No valid links found.")
             continue
         print(all_links)
-        # Save links to a file
+
+        # Save links to a file (keeping this for debugging)
         with open("extracted_links.txt", "a", encoding="utf-8") as f:
             f.write(f"Links extracted from {company['url']}:\n\n")
             for i, link in enumerate(all_links, 1):
                 f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
-        # print(all_links)
+
         print(f"\nAll links have been saved to 'extracted_links.txt'")
+
         # Filter the links
         filtered_links = filter_subdomain_links(all_links, highest_link)
 
-        # Print the filtered links
-        # print(filtered_links)
         formatted_prompt = prompts.openPositions2.format(URL_TEXT_PAIRS=filtered_links)
         response = generate(formatted_prompt)
 
@@ -345,16 +375,14 @@ if __name__ == "__main__":
             job_links = [line.strip() for line in root.text.strip().split("\n")]
             print(len(job_links))
             print(type(job_links))
-            with open(
-                "filtered_jobs_links.csv", "a", newline="", encoding="utf-8"
-            ) as f:
-                writer = csv.writer(f)
-                for link in job_links:
-                    writer.writerow([link])
+
+            # Save job links to SQLite database instead of CSV
+            save_job_links_to_db(job_links, company["url"])
+
             formatted_prompt = prompts.nextCheck.format(URL_TEXT_PAIRS=filtered_links)
             nextLink = generate(formatted_prompt)
 
-            print(f"\nFiltered links saved to 'filtered_jobs_links.csv'")
+            print(f"\nFiltered links saved to database")
         except Exception as e:
             print(f"Error parsing response: {e}")
             print(f"Response: {response}")

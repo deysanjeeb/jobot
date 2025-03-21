@@ -27,7 +27,7 @@ def read_csv_to_list(file_path):
 
 
 # Read company domains from CSV file
-company_domains = read_csv_to_list("career_pages2.csv")
+company_domains = read_csv_to_list("career_pages_ds.csv")
 # print(company_domains)
 # Common career page paths
 career_paths = [
