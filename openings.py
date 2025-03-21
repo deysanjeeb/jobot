@@ -133,9 +133,9 @@ def extract_workday_job_links(url):
     return job_links
 
 
-def filter_jobs_apple_links(links_list, highest_link):
+def filter_subdomain_links(links_list, highest_link):
     """
-    Filter a list of links to keep only those from the jobs.apple.com subdomain.
+    Filter a list of links to keep only those from the subdomain.
 
     Args:
         links_list (list): A list of dictionaries containing URLs and their text
@@ -326,12 +326,13 @@ if __name__ == "__main__":
         # print(all_links)
         print(f"\nAll links have been saved to 'extracted_links.txt'")
         # Filter the links
-        filtered_links = filter_jobs_apple_links(all_links, highest_link)
+        filtered_links = filter_subdomain_links(all_links, highest_link)
 
         # Print the filtered links
         # print(filtered_links)
         formatted_prompt = prompts.openPositions2.format(URL_TEXT_PAIRS=filtered_links)
         response = generate(formatted_prompt)
+
         print(response)
         filteredLines = [
             line for line in response.split("\n") if not line.strip().startswith("```")
@@ -350,6 +351,8 @@ if __name__ == "__main__":
                 writer = csv.writer(f)
                 for link in job_links:
                     writer.writerow([link])
+            formatted_prompt = prompts.nextCheck.format(URL_TEXT_PAIRS=filtered_links)
+            nextLink = generate(formatted_prompt)
 
             print(f"\nFiltered links saved to 'filtered_jobs_links.csv'")
         except Exception as e:
