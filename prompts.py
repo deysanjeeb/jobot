@@ -98,46 +98,48 @@ If multiple URLs have equal scores, prioritize:
 
 Include no other text in your response beyond this ranked list."""
 
-nextCheck = """You are an AI system designed to analyze URLs and identify links to the "Next" page in pagination systems. Your task is to examine a list of URLs and determine the most likely candidate for the "Next" page link.
+nextCheck = """You are an AI system designed to analyze a list of URLs and identify the most likely link to the "Next" page in a pagination system. This task is crucial for web scraping and content aggregation applications.
 
 Here is the list of URLs you need to analyze:
 
 <url_list>
-{URL_LIST}
+{URL_TEXT_PAIRS}
 </url_list>
 
-Instructions:
-1. Examine the provided URL list.
-2. Analyze each URL for patterns or keywords that might indicate it leads to a "Next" page.
-3. Consider the following common indicators:
-   - The word "next" or "page" in the URL
+Your task is to carefully examine each URL in the list and determine which one, if any, is most likely to lead to the "Next" page of content. Follow these steps:
+
+1. Analyze each URL in the list, looking for common "Next" page indicators such as:
+   - The words "next" or "page" in the URL
    - Increasing numerical values, especially at the end of the URL
-   - Query parameters like "page=2" or "offset=10"
-4. Select the single most likely URL that represents the "Next" page link.
-5. If no URL seems to indicate a "Next" page, state that none were found.
+   - Query parameters like "page=2", "offset=10", or similar
 
-Before providing your final result, wrap your thought process in <url_evaluation> tags. In this evaluation:
-- List each URL and categorize it as "Potential Next Link", "Unlikely Next Link", or "Inconclusive".
-- For each "Potential Next Link" and "Inconclusive" URL, list the indicators that support it being a Next link and any factors that make it less likely.
-- Rank the potential Next links in order of likelihood.
-- Explain your final decision, including why you chose the top-ranked URL over others (if applicable).
+2. Assign a likelihood score (1-10) for each URL being a "Next" page link.
 
-Your final output should be a single URL (or a statement that no "Next" page link was found) within <result> tags.
+3. Determine the most likely "Next" page URL based on your analysis.
 
-Example output structure:
+4. Provide your final output according to these rules:
+   - If you find a likely "Next" page URL, output only that URL.
+   - If you don't find any URLs that seem to indicate a "Next" page, output "No Next page link found."
+   - If the list is empty or contains invalid URLs, output "Invalid or empty URL list."
 
-<url_evaluation>
-[Your detailed analysis of the URLs, explaining your reasoning for each potential "Next" page link]
-</url_evaluation>
+Wrap your analysis process in <analysis> tags. In this section:
+1. List each URL with a number prefix.
+2. Categorize each URL based on its characteristics (e.g., contains "next", numerical increment, query parameter).
+3. For each URL, note any "Next" page indicators you find.
+4. Calculate and display the likelihood score (1-10) for each URL, explaining your reasoning.
+5. Compare the top candidates and explain why one is chosen over others.
+6. State your final decision and reasoning for choosing the most likely "Next" page URL.
+
+Your final output should be wrapped in <result> tags and contain ONLY the URL or the specified messages, with no additional text or explanation.
+
+Example of desired output structure (do not use this content, it's just to illustrate the format):
+
+<analysis>
+[Your detailed analysis goes here]
+</analysis>
 
 <result>
-[Either a single URL representing the most likely "Next" page link, or "No Next page link found."]
+https://example.com/page/2
 </result>
 
-Remember:
-- Only provide one link in your final result.
-- Do not include any additional information or explanation in the <result> tags.
-- If the URL list is empty or contains invalid URLs, state this in your analysis and result.
-- Context is important. A URL ending in a number doesn't always indicate a "Next" page, so consider the overall structure and pattern of the URLs in your analysis.
-
-Please proceed with your evaluation and provide the result."""
+Begin your analysis now, followed by your final result."""

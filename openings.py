@@ -373,17 +373,17 @@ if __name__ == "__main__":
 
             # Extract job links (handling text within the root element)
             job_links = [line.strip() for line in root.text.strip().split("\n")]
-            print(len(job_links))
-            print(type(job_links))
 
             # Save job links to SQLite database instead of CSV
             save_job_links_to_db(job_links, company["url"])
 
             formatted_prompt = prompts.nextCheck.format(URL_TEXT_PAIRS=filtered_links)
             nextLink = generate(formatted_prompt)
+            print("next link result: ", nextLink)
 
             print(f"\nFiltered links saved to database")
         except Exception as e:
             print(f"Error parsing response: {e}")
             print(f"Response: {response}")
             continue
+        break
