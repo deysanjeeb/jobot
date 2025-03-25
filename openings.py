@@ -145,7 +145,7 @@ def filter_subdomain_links(links_list, highest_link):
         list: A list of dictionaries containing filtered links with their index, URL, and text
     """
     jobs_links = []
-    print(highest_link)
+    # print(highest_link)
 
     for i, link in enumerate(links_list):
         parsed_url = urlparse(link["url"])
@@ -201,7 +201,6 @@ def extract_links(url):
             base_url = "{0.scheme}://{0.netloc}".format(urlparse(url))
 
             for a_tag in soup.find_all("a", href=True):
-                print(a_tag)
                 href = a_tag["href"]
 
                 # Skip javascript and anchor links
@@ -329,7 +328,7 @@ if __name__ == "__main__":
     for company in companies:
         highest_link = ""
         print(f"Analyzing links for {company['url'][0]}...")
-        print(f"Links: {company['text']}")
+        # print(f"Links: {company['text']}")
         highest_link = get_highest_scored_link(company["text"])
 
         print(f"Highest scored link: {highest_link}")
@@ -371,7 +370,6 @@ if __name__ == "__main__":
             job_links = [line.strip() for line in root.text.strip().split("\n")]
 
             # Save job links to SQLite database instead of CSV
-            print(company["url"][0])
             save_job_links_to_db(job_links, company["url"][0])
 
             formatted_prompt = prompts.nextCheck.format(URL_TEXT_PAIRS=filtered_links)
