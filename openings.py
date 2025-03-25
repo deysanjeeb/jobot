@@ -287,6 +287,79 @@ def setup_database():
     print("Database setup complete")
 
 
+def create_next_links_table():
+    """
+    Create a comprehensive table to store and manage next page links for job listing pages
+    """
+    conn = sqlite3.connect("job_links.db")
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+    CREATE TABLE IF NOT EXISTS next_page_links (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_name TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        next_page_url TEXT NOT NULL,
+        last_scraped_timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+        domain TEXT NOT NULL,
+        extraction_method TEXT,
+        failed_attempts INTEGER DEFAULT 0,
+        
+        UNIQUE(company_name, base_url),
+        CHECK(failed_attempts >= 0),
+        CHECK(page_number > 0)
+    )
+    """
+    )
+
+    conn.commit()
+    conn.close()
+
+
+def insert_next_link(
+    company_name,
+    base_url,
+    next_page_url,
+    domain,
+    extraction_method="default",
+    total_pages_found=None,
+):
+    """
+    Insert or update a next page link for a specific company
+    """
+    conn = sqlite3.connect("job_scraper.db")
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+        INSERT OR REPLACE INTO next_page_links (
+            company_name, 
+            base_url, 
+            next_page_url, 
+            domain,
+            extraction_method,
+            last_scraped_timestamp
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+            (
+                company_name,
+                base_url,
+                next_page_url,
+                domain,
+                extraction_method,
+                total_pages_found,
+                datetime.now(),
+            ),
+        )
+        conn.commit()
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+    finally:
+        conn.close()
+
+
 def save_job_links_to_db(job_links, company_name):
     """
     Save job links to SQLite database
@@ -311,6 +384,26 @@ def save_job_links_to_db(job_links, company_name):
     conn.commit()
     print(f"Saved {len(job_links)} job links for {company_name} to database")
     conn.close()
+
+
+def extract_link_from_result(text):
+    """
+    Extracts the link inside <result> tags from the given text.
+
+    Args:
+        text (str): The input text containing XML-like result tags
+
+    Returns:
+        str or None: The extracted link, or None if no link is found
+    """
+    # Use regex to find content between <result> and </result> tags
+    match = re.search(r"<result>(.*?)</result>", text, re.DOTALL)
+
+    if match:
+        # Return the content of the match, stripped of whitespace
+        return match.group(1).strip()
+
+    return None
 
 
 if __name__ == "__main__":
@@ -374,6 +467,7 @@ if __name__ == "__main__":
 
             formatted_prompt = prompts.nextCheck.format(URL_TEXT_PAIRS=filtered_links)
             nextLink = generate(formatted_prompt)
+            nextLink = extract_link_from_result(nextLink)
             print("next link result: ", nextLink)
 
             print(f"\nFiltered links saved to database")
@@ -381,4 +475,4 @@ if __name__ == "__main__":
             print(f"Error parsing response: {e}")
             print(f"Response: {response}")
             continue
-        break
+        # break
