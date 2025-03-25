@@ -13,7 +13,7 @@ import os
 from pprint import pprint
 import xml.etree.ElementTree as ET
 import sqlite3  # Added SQLite import
-
+import ast
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
@@ -288,7 +288,7 @@ def setup_database():
     print("Database setup complete")
 
 
-def save_job_links_to_db(job_links, company_url):
+def save_job_links_to_db(job_links, company_name):
     """
     Save job links to SQLite database
 
@@ -297,14 +297,11 @@ def save_job_links_to_db(job_links, company_url):
         company_url (str): The company URL/domain
     """
     if not job_links:
-        print(f"No job links to save for {company_url}")
+        print(f"No job links to save for {company_name}")
         return
 
     conn = sqlite3.connect("job_links.db")
     cursor = conn.cursor()
-
-    # Extract company name from URL for better identification
-    company_name = extract_domain(company_url)
 
     # Insert links
     for link in job_links:
@@ -326,11 +323,12 @@ if __name__ == "__main__":
     with open(csv_path, "r", encoding="utf-8") as file:
         reader = csv.DictReader(file)
         for row in reader:
-            companies.append({"url": row["Domain"], "text": row["Links"]})
+            converted_list = ast.literal_eval(row["Domain"])
+            companies.append({"url": converted_list, "text": row["Links"]})
 
     for company in companies:
         highest_link = ""
-        print(f"Analyzing links for {company['url']}...")
+        print(f"Analyzing links for {company['url'][0]}...")
         print(f"Links: {company['text']}")
         highest_link = get_highest_scored_link(company["text"])
 
@@ -347,15 +345,14 @@ if __name__ == "__main__":
         else:
             print("No valid links found.")
             continue
-        print(all_links)
 
         # Save links to a file (keeping this for debugging)
-        with open("extracted_links.txt", "a", encoding="utf-8") as f:
-            f.write(f"Links extracted from {company['url']}:\n\n")
-            for i, link in enumerate(all_links, 1):
-                f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
+        # with open("extracted_links.txt", "a", encoding="utf-8") as f:
+        #     f.write(f"Links extracted from {company['url']}:\n\n")
+        #     for i, link in enumerate(all_links, 1):
+        #         f.write(f"{i}. {link['url']} - \"{link['text']}\"\n")
 
-        print(f"\nAll links have been saved to 'extracted_links.txt'")
+        # print(f"\nAll links have been saved to 'extracted_links.txt'")
 
         # Filter the links
         filtered_links = filter_subdomain_links(all_links, highest_link)
@@ -363,7 +360,6 @@ if __name__ == "__main__":
         formatted_prompt = prompts.openPositions2.format(URL_TEXT_PAIRS=filtered_links)
         response = generate(formatted_prompt)
 
-        print(response)
         filteredLines = [
             line for line in response.split("\n") if not line.strip().startswith("```")
         ]
@@ -375,7 +371,8 @@ if __name__ == "__main__":
             job_links = [line.strip() for line in root.text.strip().split("\n")]
 
             # Save job links to SQLite database instead of CSV
-            save_job_links_to_db(job_links, company["url"])
+            print(company["url"][0])
+            save_job_links_to_db(job_links, company["url"][0])
 
             formatted_prompt = prompts.nextCheck.format(URL_TEXT_PAIRS=filtered_links)
             nextLink = generate(formatted_prompt)
