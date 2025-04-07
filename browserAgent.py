@@ -116,6 +116,10 @@ browser = Browser(
     )
 )
 
+initial_actions = [
+    {"open_tab": {"url": "https://www.jobright.ai/jobs/recommended"}},
+]
+
 
 async def main():
     # ground_task = (
@@ -133,7 +137,6 @@ async def main():
         "search at company:"
     )
     tasks = [
-        """Visit jobright.ai/jobs/recommended"""
         """Click on sign in"""
         """wait for user to sign in"""
         # ground_task + '\n' + 'Amazon',
