@@ -111,7 +111,7 @@ async def upload_cv(index: int, browser: BrowserContext):
 browser = Browser(
     config=BrowserConfig(
         disable_security=True,
-        # chrome_instance_path="/usr/bin/google-chrome"
+        chrome_instance_path="/usr/bin/google-chrome"
         # cdp_url="http://localhost:9222",
     )
 )
@@ -137,15 +137,8 @@ async def main():
         "search at company:"
     )
     tasks = [
-        """Click on sign in"""
-        """wait for user to sign in"""
-        # ground_task + '\n' + 'Amazon',
-        # ground_task + '\n' + 'Apple',
-        # ground_task + '\n' + 'Microsoft',
-        # ground_task
-        # + '\n'
-        # + 'go to https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Taiwan%2C-Remote/Fulfillment-Analyst---New-College-Graduate-2025_JR1988949/apply/autofillWithResume?workerSubType=0c40f6bd1d8f10adf6dae42e46d44a17&workerSubType=ab40a98049581037a3ada55b087049b7 NVIDIA',
-        # ground_task + '\n' + 'Meta',
+         """Click on the first Apply now button""",
+        # """give the URL of the current page"""
     ]
     api_key = os.getenv("GEMINI_API_KEY")
 
@@ -154,13 +147,15 @@ async def main():
         model="gemini-2.0-flash-exp", api_key=SecretStr(os.getenv("GEMINI_API_KEY"))
     )
 
-    agents = []
-    for task in tasks:
-        agent = Agent(task=task, llm=llm, controller=controller, browser=browser)
-        agents.append(agent)
+    # agents = []
+    # for task in tasks:
+    #     agent = Agent(task=task, llm=llm, controller=controller, browser=browser)
+    #     agents.append(agent)
 
-    await asyncio.gather(*[agent.run() for agent in agents])
+    # await asyncio.gather(*[agent.run() for agent in agents])
 
+    agent = Agent(task=tasks, llm=llm, controller=controller, browser=browser,initial_actions=initial_actions)
+    await agent.run()
 
 if __name__ == "__main__":
     asyncio.run(main())
