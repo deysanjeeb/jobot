@@ -137,8 +137,8 @@ async def main():
         "search at company:"
     )
     tasks = [
-         """Click on the first Apply now button""",
-        # """give the URL of the current page"""
+         """Click on the first Apply now button only once""",
+         """give the URL of the current page"""
     ]
     api_key = os.getenv("GEMINI_API_KEY")
 
