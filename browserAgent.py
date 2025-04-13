@@ -1,10 +1,3 @@
-"""
-Goal: Searches for job listings, evaluates relevance based on a CV, and applies
-
-@dev You need to add OPENAI_API_KEY to your environment variables.
-Also you have to install PyPDF2 to read pdf files: pip install PyPDF2
-"""
-
 import asyncio
 import csv
 import logging
@@ -13,7 +6,9 @@ import sys
 from pathlib import Path
 from typing import Optional
 from langchain_google_genai import ChatGoogleGenerativeAI
-
+import gspread
+from gspread_dataframe import set_with_dataframe
+from oauth2client.service_account import ServiceAccountCredentials
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -115,6 +110,7 @@ async def upload_cv(index: int, browser: BrowserContext):
 @controller.action("Save URL", param_model=Position)
 def save_url(params: Position):
     logger.info(params.url)
+    parameters.append_row([params.url])
 
 
 browser = Browser(
@@ -177,4 +173,20 @@ async def main():
 
 
 if __name__ == "__main__":
+    scope = [
+        "https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive",
+    ]
+
+    creds = ServiceAccountCredentials.from_json_keyfile_name(
+        "secrets/credentials.json", scope
+    )
+
+    # Authenticate with Google
+    client = gspread.authorize(creds)
+    jobslist = client.open("job applications")
+    parameters = jobslist.get_worksheet(0)
+
+    # Add a new row to the sheet
+
     asyncio.run(main())
