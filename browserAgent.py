@@ -60,6 +60,10 @@ def save_jobs(job: Job):
     return "Saved job to file"
 
 
+class Position(BaseModel):
+    url: str
+
+
 @controller.action("Read jobs from file")
 def read_jobs():
     with open("jobs.csv", "r") as f:
@@ -108,10 +112,15 @@ async def upload_cv(index: int, browser: BrowserContext):
         return ActionResult(error=f"Failed to upload file to index {index}")
 
 
+@controller.action("Save URL", param_model=Position)
+def save_url(params: Position):
+    logger.info(params.url)
+
+
 browser = Browser(
     config=BrowserConfig(
         disable_security=True,
-        chrome_instance_path="/usr/bin/google-chrome"
+        # chrome_instance_path="/usr/bin/google-chrome"
         # cdp_url="http://localhost:9222",
     )
 )
@@ -137,8 +146,11 @@ async def main():
         "search at company:"
     )
     tasks = [
-         """Click on the first Apply now button only once""",
-         """give the URL of the current page"""
+        """Click on the first Apply now button only once""",
+        """wait 5 seconds""",
+        """Click on apply now""",
+        """wait 5 seconds""",
+        """Save URL of the current page""",
     ]
     api_key = os.getenv("GEMINI_API_KEY")
 
@@ -154,8 +166,15 @@ async def main():
 
     # await asyncio.gather(*[agent.run() for agent in agents])
 
-    agent = Agent(task=tasks, llm=llm, controller=controller, browser=browser,initial_actions=initial_actions)
+    agent = Agent(
+        task=tasks,
+        llm=llm,
+        controller=controller,
+        browser=browser,
+        initial_actions=initial_actions,
+    )
     await agent.run()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
