@@ -20,6 +20,7 @@ from PyPDF2 import PdfReader
 from browser_use import ActionResult, Agent, Controller
 from browser_use.browser.browser import Browser, BrowserConfig
 from browser_use.browser.context import BrowserContext
+import requests
 
 # Validate required environment variables
 load_dotenv()
@@ -33,6 +34,29 @@ CV = Path.cwd() / "Back End.pdf"
 
 # if not CV.exists():
 # 	raise FileNotFoundError(f'You need to set the path to your cv file in the CV variable. CV file not found at {CV}')
+
+
+def llm_friendly_content(url: str):
+    """
+    This function is used to format the content in a way that is friendly for LLMs.
+    It can be used to extract specific information from the content.
+    """
+
+    # Here you can implement your logic to format the content
+    # For example, you can use regex to extract specific information
+
+    """
+    Sends a GET request to the specified URL and returns the text content of the response.
+    """
+    try:
+        jina = "https://r.jina.ai/" + url
+        response = requests.get(jina)
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        logger.info(f"Fetched text from URL {response.text}")
+        return response.text
+    except requests.RequestException as e:
+        logger.error(f"Failed to fetch text from URL {url}: {e}")
+        return ""
 
 
 class Job(BaseModel):
@@ -111,6 +135,7 @@ async def upload_cv(index: int, browser: BrowserContext):
 def save_url(params: Position):
     logger.info(params.url)
     parameters.append_row([params.url])
+    llm_friendly_content(params.url)
 
 
 browser = Browser(
